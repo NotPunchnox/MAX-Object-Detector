@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 
+vm:
+  size: x-large
+
 dist: focal
 
 language: python
@@ -40,16 +43,18 @@ before_install:
 
 install:
   - docker build --build-arg model=$MODEL -f "$DOCKERFILE" -t quay.io/codait/max-object-detector:"$IMAGE"-"$ARCH"-"$VERSION"-"$MODEL" .
-  - docker run -it -d --rm -p 5000:5000 quay.io/codait/max-object-detector:"$IMAGE"-"$ARCH"-"$VERSION"-"$MODEL"
+  - docker run -it -d --name obj -p 5000:5000 --memory="29g" quay.io/codait/max-object-detector:"$IMAGE"-"$ARCH"-"$VERSION"-"$MODEL"
   - pip install -r requirements-test.txt
 
 before_script:
   - flake8 . --max-line-length=127 --exclude utils/,protos/
   - bandit -r .
   - sleep 30
+  - docker container stats --no-stream
 
 script:
   - pytest tests/test.py
+  - docker logs obj
 
 after_success:
   - if [[ "$IMAGE" != "test" && "$TRAVIS_PULL_REQUEST" == "false" ]] && [[ "$TRAVIS_BRANCH" == "master" || "$TRAVIS_BRANCH" == "$TRAVIS_TAG" ]]; then
